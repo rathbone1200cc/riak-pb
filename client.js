@@ -42,14 +42,16 @@ function RiakClient(options) {
   }
 
   function clientOnReadable() {
-    assert(busy, 'shouldnt get a readable when not waiting for response');
-    var response;
-    while (response = client.read()) {
-      var callback = queue.shift();
-      if (! expectMultiple) {
-        busy = false;
-        if (callback) callback(null, response);
-        flush();
+    if (! expectMultiple) {
+      assert(busy, 'shouldnt get a readable when not waiting for response');
+      var response;
+      while (response = client.read()) {
+        if (! expectMultiple) {
+          busy = false;
+          var callback = queue.shift();
+          if (callback) callback(null, response);
+          flush();
+        }
       }
     }
   }
@@ -57,6 +59,8 @@ function RiakClient(options) {
   function clientOnDone() {
     if (busy && expectMultiple) {
       busy = false;
+      var callback = queue.shift();
+      if (callback) callback(null);
       flush();
     }
   }
@@ -103,19 +107,9 @@ function RiakClient(options) {
   c.getKeys = function getKeys(params, callback) {
     var s = new PassThrough({objectMode: true});
     var calledback = false;
-    request('RpbListKeysReq', params, true, function(err) {
-      if (err) {
-        if (! callback) s.emit('error', err);
-        else {
-          calledback = true;
-          callback(err);
-        }
-      }
-    });
-    client.pipe(s);
+
     client.once('done', function() {
-      if (callback) client.removeListener('readable', clientOnReadable);
-      client.unpipe(s);
+      client.removeListener('readable', clientOnReadable);
       if (callback && ! calledback) {
         calledback = true;
         callback(null, keys);
@@ -125,15 +119,27 @@ function RiakClient(options) {
     var keys;
     if (callback) {
       keys = [];
-      client.on('readable', clientOnReadable);
     }
+    client.on('readable', clientOnReadable);
+
+    request('RpbListKeysReq', params, true, function(err) {
+      if (err) {
+        if (! callback) s.emit('error', err);
+        else {
+          calledback = true;
+          callback(err);
+        }
+      }
+    });
+
     return s;
 
     function clientOnReadable() {
       var key;
       while (key = client.read()) {
-        console.log('client got', key);
+        console.log('read from the client:', key);
         keys.push(key);
+        s.push(key);
       }
     }
   };

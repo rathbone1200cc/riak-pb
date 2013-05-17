@@ -168,17 +168,15 @@ test('resetBucket', function(t) {
 
 test('getKeys', function (t) {
   console.log('-------');
-  client.getKeys({ bucket: 'test' }, function (err, reply) {
+  client.getKeys({ bucket: 'test' }, function (err, keys) {
     t.notOk(err, err && err.message);
-    t.ok(Array.isArray(reply.keys));
-    t.end();
-    return;
-    var len = reply.keys.length;
-    reply.keys = reply.keys.filter(function (key) {
+    t.ok(Array.isArray(keys));
+    var len = keys.length;
+    t.ok(len > 0, 'keys length is should be > 0');
+    keys = keys.filter(function (key) {
       return (key.toString() === 'test' || key.toString() === 'large_test' || key.toString() === 'test-vclock' || key.toString() === 'test-put-index')
     });
-    t.equal(reply.keys.length, len);
-    t.equal(reply.done, true);
+    t.equal(keys.length, len);
     t.end();
   });
 });

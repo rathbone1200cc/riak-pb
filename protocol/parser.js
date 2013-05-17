@@ -10,13 +10,16 @@ function Parser(translator) {
   var reply = {};
   var expectMultiple = false;
 
-  var s = new Duplex({objectMode: true});
+  var s = new Duplex({objectMode: true, highWaterMark: 0});
 
   s._write =
   function _write(buf, encoding, callback) {
     splitPacket(buf);
     if (numBytesAwaiting == 0) doReply();
     callback();
+    process.nextTick(function() {
+      s.emit('drain');
+    });
   };
 
   s._read = function _read() {};
@@ -41,12 +44,10 @@ function Parser(translator) {
       resBuffers[resBuffers.length - 1] = newBuf;
       pos = len;
       numBytesAwaiting -= len;
-    } else {
-      resBuffers = [];
     }
     while (pos < pkt.length) {
       len = butils.readInt32(pkt, pos);
-      numBytesAwaiting = len + 4 - pkt.length;
+      numBytesAwaiting = len + 4 - pkt.length + pos;
       resBuffers.push(pkt.slice(pos + 4, Math.min(pos + len + 4, pkt.length)));
       pos += len + 4;
     }

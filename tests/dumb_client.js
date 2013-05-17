@@ -52,7 +52,6 @@ test('it connects from pool', function(t) {
 
   var replyCount = 0;
   client.on('readable', function() {
-    console.log('READABLE');
     var buf;
     while (buf = client.read()) {
       replyCount ++;

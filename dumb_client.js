@@ -23,8 +23,15 @@ function Client(options) {
 
   /// Command
 
+  var oldWrite = s.write;
+  s.write = function(command) {
+    assert(typeof command == 'object', 'command must be an object');
+    return oldWrite.apply(s, arguments);
+  }
+
   s._write =
   function (command, encoding, _callback) {
+    assert(typeof command == 'object', 'command must be an object');
     if (callback) throw new Error('I\'m in the middle of a request');
     lastCommand = command;
     callback = _callback;
@@ -69,7 +76,6 @@ function Client(options) {
   /// On Parser Readable
 
   function onParserDone() {
-    console.log('parser done');
     s.emit('done');
     finishResponse();
   }
@@ -80,8 +86,6 @@ function Client(options) {
   function onParserReadable() {
     var reply;
     while (reply = parser.read()) {
-      console.log('from parser: %j', reply);
-      s.push(reply);
       handleReply(reply);
     }
   }
@@ -94,8 +98,14 @@ function Client(options) {
       respondError(new Error(reply.errmsg));
     } else {
       if (! expectMultiple) {
+        s.push(reply);
         response = reply;
         finishResponse();
+      } else {
+        if (reply.done) s.emit('done');
+        else {
+          s.push(reply);
+        }
       }
     }
   }
