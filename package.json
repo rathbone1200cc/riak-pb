@@ -1,0 +1,30 @@
+{
+  "name": "riak-pb",
+  "version": "0.0.1",
+  "description": "Riak Protocol Buffers Client",
+  "main": "client.js",
+  "scripts": {
+    "test": "tap tests/*.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/CrowdProcess/riak-pb.git"
+  },
+  "dependencies": {
+
+  },
+  "devDependencies": {
+    "tap": "*"
+  },
+  "keywords": [
+    "riak",
+    "protocol",
+    "buffers",
+    "database",
+    "client"
+  ],
+  "author": "CrowdProcess",
+  "license": "MIT",
+  "readmeFilename": "README.md",
+  "gitHead": "021247b24fdf0982ff4bb6c08c44a959585427e6"
+}
