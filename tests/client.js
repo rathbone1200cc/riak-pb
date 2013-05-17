@@ -200,6 +200,44 @@ test('getKeys streaming', function(t) {
   });
 });
 
+
+test('search', function (t) {
+  client.search({ index: 'test', q: 'test:data' }, function (err, reply) {
+    t.end();
+  });
+});
+
+test('mapred', function(t) {
+  var request = {
+    inputs: [['test', 'test']],
+    query: [
+      {
+        map: {
+          source: 'function (v) { return [[v.bucket, v.key]]; }',
+          language: 'javascript',
+          keep: true
+        }},
+      {
+        map: {
+          name: 'Riak.mapValuesJson',
+          language: 'javascript',
+          keep: true
+      }}]};
+
+  var params = { request: JSON.stringify(request), content_type: 'application/json' };
+
+  client.mapred(params, function (err, responses) {
+    t.notOk(err, err && err.message);
+    t.ok(responses.length > 0);
+    responses.forEach(function(response) {
+      t.type(response.phase, 'number');
+      t.type(response, 'object');
+    });
+    t.end();
+  });
+
+});
+
 test('del', function(t) {
   var keys = ['test', 'large_test', 'test-vclock', 'test-put-index'];
   async.each(keys, del, function(err) {
@@ -218,66 +256,3 @@ test('disconnects', function(t) {
 });
 
 return;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-exports.mapred = function (test) {
-  var request = {
-    inputs: [['test', 'test']],
-    query: [
-    {
-      map: {
-        source: 'function (v) { return [[v.bucket, v.key]]; }',
-        language: 'javascript',
-        keep: true
-      }
-    },
-    {
-      map: {
-        name: 'Riak.mapValuesJson',
-        language: 'javascript',
-        keep: true
-      }
-    }
-    ]
-  };
-  client.mapred({ request: JSON.stringify(request), content_type: 'application/json' }, function (reply) {
-    test.equal(reply.errmsg, undefined);
-    test.ok(Array.isArray(reply[0]));
-    test.ok(Array.isArray(reply[0][0]));
-    test.equal(reply[0][0][0], 'test');
-    test.equal(reply[0][0][1], 'test');
-    test.ok(Array.isArray(reply[1]));
-    test.equal(typeof reply[1][0], 'object');
-    test.equal(reply[1][0].test, 'data');
-    test.equal(reply.done, true);
-    test.done();
-  });
-};
-
-exports.search = function (test) {
-  client.search({ index: 'test', q: 'test:data' }, function (reply) {
-    test.done();
-  });
-};
-
-

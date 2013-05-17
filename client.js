@@ -3,6 +3,7 @@ var assert = require('assert');
 var DumbClient = require('./dumb_client');
 var PassThrough = require('stream').PassThrough;
 
+exports =
 module.exports =
 function RiakClient(options) {
   var c = {};
@@ -178,84 +179,51 @@ function RiakClient(options) {
     request('RpbIndexReq', params, false, callback);
   };
 
+  c.search = function search(params, callback) {
+    request('RpbSearchQueryReq', params, false, callback);
+  };
+
+  c.mapred = function mapred(params, callback) {
+    var s = new PassThrough({objectMode: true});
+
+    client.once('done', function() {
+      client.removeListener('readable', clientOnReadable);
+      s.emit('end');
+    });
+
+    var results;
+    if (callback) {
+      results = [];
+    }
+
+    client.on('readable', clientOnReadable);
+
+    request('RpbMapRedReq', params, true, function(err) {
+      if (err) {
+        if (! callback) s.emit('error', err);
+        else callback(err);
+      }
+      else if (callback) {
+        callback(null, results);
+      }
+    });
+
+    return s;
+
+    function clientOnReadable() {
+      var result;
+      while(result = client.read()) {
+        if (results) results.push(result);
+      }
+    }
+
+  };
+
+
   return c;
 };
 
-return;
-
-RiakPBC.prototype.getKeys = function (params, streaming, callback) {
-  if (typeof streaming === 'function') {
-    callback = streaming;
-    streaming = false;
-  }
-
-  if (streaming) {
-    var emitter = new EventEmitter();
-    this.makeRequest('RpbListKeysReq', params, callback, true, emitter);
-    return emitter;
-  } else {
-    this.makeRequest('RpbListKeysReq', params, callback, true);
-  }
-};
-
-
-
-
-
-RiakPBC.prototype.mapred = function (params, streaming, callback) {
-  if (typeof streaming === 'function') {
-    callback = streaming;
-    streaming = false;
-  }
-
-  if (streaming) {
-    var emitter = new EventEmitter();
-    this.makeRequest('RpbMapRedReq', params, callback, true, emitter);
-    return emitter;
-  } else {
-    this.makeRequest('RpbMapRedReq', params, callback, true);
-  }
-};
-
-
-
-RiakPBC.prototype.search = function (params, callback) {
-  this.makeRequest('RpbSearchQueryReq', params, callback);
-};
-
-RiakPBC.prototype.getClientId = function (callback) {
-  this.makeRequest('RpbGetClientIdReq', null, callback);
-};
-
-RiakPBC.prototype.setClientId = function (params, callback) {
-  this.makeRequest('RpbSetClientIdReq', params, callback);
-};
-
-
-
-RiakPBC.prototype.ping = function (callback) {
-  this.makeRequest('RpbPingReq', null, callback);
-};
-
-RiakPBC.prototype.connect = function (callback) {
-  if (this.connected) return callback();
-  var self = this;
-  self.client.connect(self.port, self.host, function () {
-    self.connected = true;
-    callback();
-  });
-};
-
-RiakPBC.prototype.disconnect = function () {
-  if (!this.connected) return;
-  this.client.end();
-  this.connected = false;
-  if (this.task) {
-    this.queue.unshift(this.task);
-    this.task = undefined;
-  }
-};
-
-exports.createClient = function (options) {
-  return new RiakPBC(options);
+exports.createClient =
+function createClient(options) {
+  return exports(options);
 };
