@@ -10,6 +10,7 @@ function Client(options) {
 
   var s = new Duplex({objectMode: true, highWaterMark: 1});
 
+  var destroyed = false;
   var connection;
   var parser;
   var lastCommand;
@@ -32,7 +33,9 @@ function Client(options) {
 
   function sendCommand(command) {
     if (! connection) connection = connect();
-    var serialized = Protocol.serialize(command);
+    var serialized = Protocol.serialize(command.payload);
+    console.log('sending:', serialized);
+    parser.expectMultiple(command.expectMultiple);
     connection.write(serialized);
   }
 
@@ -42,6 +45,7 @@ function Client(options) {
   /// Connect
 
   function connect() {
+    if (destroyed) throw new Error('Destroyed');
     connection = pool.connect();
     connection.on('error', onConnectionError);
     parser = Protocol.parse();
@@ -72,8 +76,11 @@ function Client(options) {
   /// Handle response buffer
 
   function handleReply(reply) {
-    response = Protocol.merge(response, reply)
-    if (!lastCommand.expectMultiple || reply.done || reply.error) {
+    console.log('handling reply from parser:', reply);
+    if (reply.errmsg) {
+      respondError(new Error(reply.errmsg));
+    } else {
+      response = reply;
       finishResponse();
     }
   }
@@ -124,6 +131,15 @@ function Client(options) {
     callback = undefined;
     retries = 0;
     lastCommand = undefined;
+  }
+
+
+  /// Destroy
+
+  s.destroy =
+  function destroy() {
+    destroyed = true;
+    if (connection) connection.destroy();
   }
 
   return s;

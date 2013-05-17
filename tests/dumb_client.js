@@ -1,7 +1,7 @@
 var Duplex = require('stream').Duplex;
 var extend = require('util')._extend;
 var test = require('tap').test;
-var Client = require('../');
+var Client = require('../dumb_client');
 
 test('it connects from pool', function(t) {
 
@@ -26,6 +26,8 @@ test('it connects from pool', function(t) {
 
       parser._read = function() {};
 
+      parser.expectMultiple = function(v) {};
+
       return parser;
 
     },
@@ -47,7 +49,7 @@ test('it connects from pool', function(t) {
   });
 
   var writeCalledBack = false;
-  var ret = client.write({a: 'WAT'}, function(err) {
+  var ret = client.write({payload: {a: 'WAT'}}, function(err) {
     writeCalledBack = true;
     t.notOk(err, err && err.message);
   });
@@ -98,6 +100,8 @@ test('it reconnects when the connection errors', function(t) {
 
       parser._read = function() {};
 
+      parser.expectMultiple = function(v) {};
+
       return parser;
 
     },
@@ -109,7 +113,6 @@ test('it reconnects when the connection errors', function(t) {
 
   var mockPool = {
     connect: function() {
-      console.log('connect');
       connectCount ++;
       return mockConnection;
     }
@@ -121,7 +124,7 @@ test('it reconnects when the connection errors', function(t) {
   });
 
   var writeCalledBack = false;
-  var ret = client.write({a: 'WAT'}, function(err) {
+  var ret = client.write({payload: {a: 'WAT'}}, function(err) {
     writeCalledBack = true;
     t.notOk(err, err && err.message);
   });
