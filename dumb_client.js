@@ -34,7 +34,6 @@ function Client(options) {
   function sendCommand(command) {
     if (! connection) connection = connect();
     var serialized = Protocol.serialize(command.payload);
-    console.log('sending:', serialized);
     parser.expectMultiple(command.expectMultiple);
     connection.write(serialized);
   }
@@ -76,7 +75,6 @@ function Client(options) {
   /// Handle response buffer
 
   function handleReply(reply) {
-    console.log('handling reply from parser:', reply);
     if (reply.errmsg) {
       respondError(new Error(reply.errmsg));
     } else {

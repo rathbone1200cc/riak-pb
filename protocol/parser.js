@@ -50,7 +50,6 @@ function Parser(translator) {
       resBuffers.push(pkt.slice(pos + 4, Math.min(pos + len + 4, pkt.length)));
       pos += len + 4;
     }
-    console.log('resbuffers:', resBuffers);
   }
 
 
@@ -59,11 +58,7 @@ function Parser(translator) {
   function doReply() {
     resBuffers.forEach(function (packet) {
       var mc = messageCodes[packet[0]];
-      console.log('messageCode:', mc);
-      console.log('rest of the packet:', packet.slice(1));
-
       var response = translator.decode(mc, packet.slice(1));
-      console.log('response: %j', response);
       if (response.content && Array.isArray(response.content)) {
         response.content.forEach(function (item) {
           if (item.value && item.content_type) {

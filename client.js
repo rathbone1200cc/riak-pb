@@ -71,11 +71,17 @@ function RiakClient(options) {
 
   /// Client utility methods
   c.getBuckets = function getBuckets(callback) {
-    request('RpbListBucketsReq', null, false, callback);
+    request('RpbListBucketsReq', null, false, function(err, reply) {
+      if (err) return callback(err);
+      callback(null, reply.buckets);
+    });
   };
 
   c.getBucket = function getBucket(params, callback) {
-    request('RpbGetBucketReq', params, callback);
+    request('RpbGetBucketReq', params, false, function(err, reply) {
+      if (err) return callback(err);
+      callback(null, reply.props);
+    });
   }
 
   c.setBucket = function setBucket(params, callback) {
@@ -84,7 +90,7 @@ function RiakClient(options) {
 
   c.getKeys = function getKeys(params, callback) {
     var s = new PassThrough({objectMode: true});
-    request(RpbListKeysReq, params, true, function(err) {
+    request('RpbListKeysReq', params, true, function(err) {
       if (err) {
         if (! callback) s.emit('error', err);
         else callback(err);
@@ -97,22 +103,47 @@ function RiakClient(options) {
     return s;
   };
 
-  c.setClientId = function (params, callback) {
+  c.setClientId = function setClientId(params, callback) {
     request('RpbSetClientIdReq', params, false, callback);
   };
 
 
-  c.getClientId = function(callback) {
+  c.getClientId = function getClientId(callback) {
     request('RpbGetClientIdReq', null, false, function(err, reply) {
       if (err) return callback(err);
       callback(null, reply.client_id);
     });
   };
 
+  c.ping = function ping(callback) {
+    request('RpbPingReq', null, false, callback);
+  };
+
+  c.getServerInfo = function getServerInfo(callback) {
+    request('RpbGetServerInfoReq', null, false, callback);
+  };
+
+  c.put = function put(params, callback) {
+    request('RpbPutReq', params, false, callback);
+  };
+
+  c.get = function get(params, callback) {
+    request('RpbGetReq', params, false, callback);
+  };
+
+  c.del = function del(params, callback) {
+    this.makeRequest('RpbDelReq', params, false, callback);
+  };
+
+  c.getIndex = function getIndex(params, callback) {
+    request('RpbIndexReq', params, false, callback);
+  };
+
   return c;
 };
 
 return;
+
 RiakPBC.prototype.getKeys = function (params, streaming, callback) {
   if (typeof streaming === 'function') {
     callback = streaming;
@@ -128,17 +159,9 @@ RiakPBC.prototype.getKeys = function (params, streaming, callback) {
   }
 };
 
-RiakPBC.prototype.put = function (params, callback) {
-  this.makeRequest('RpbPutReq', params, callback);
-};
 
-RiakPBC.prototype.get = function (params, callback) {
-  this.makeRequest('RpbGetReq', params, callback);
-};
 
-RiakPBC.prototype.del = function (params, callback) {
-  this.makeRequest('RpbDelReq', params, callback);
-};
+
 
 RiakPBC.prototype.mapred = function (params, streaming, callback) {
   if (typeof streaming === 'function') {
@@ -155,9 +178,7 @@ RiakPBC.prototype.mapred = function (params, streaming, callback) {
   }
 };
 
-RiakPBC.prototype.getIndex = function (params, callback) {
-  this.makeRequest('RpbIndexReq', params, callback);
-};
+
 
 RiakPBC.prototype.search = function (params, callback) {
   this.makeRequest('RpbSearchQueryReq', params, callback);
@@ -171,9 +192,7 @@ RiakPBC.prototype.setClientId = function (params, callback) {
   this.makeRequest('RpbSetClientIdReq', params, callback);
 };
 
-RiakPBC.prototype.getServerInfo = function (callback) {
-  this.makeRequest('RpbGetServerInfoReq', null, callback);
-};
+
 
 RiakPBC.prototype.ping = function (callback) {
   this.makeRequest('RpbPingReq', null, callback);
