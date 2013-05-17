@@ -214,6 +214,7 @@ function RiakClient(options) {
       var result;
       while(result = client.read()) {
         if (results) results.push(result);
+        s.push(result);
       }
     }
 
