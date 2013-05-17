@@ -22,15 +22,19 @@ function Client(options) {
   /// Command
 
   s._write =
-  function (command, encoding,   _callback) {
+  function (command, encoding, _callback) {
     if (callback) throw new Error('I\'m in the middle of a request');
-    if (! connection) connection = connect();
     lastCommand = command;
     callback = _callback;
-    var serialized = Protocol.serialize(command);
-    connection.write(serialized);
+    sendCommand(command);
     return false;
   };
+
+  function sendCommand(command) {
+    if (! connection) connection = connect();
+    var serialized = Protocol.serialize(command);
+    connection.write(serialized);
+  }
 
   s._read = function() {};
 
@@ -47,6 +51,10 @@ function Client(options) {
   }
 
   function onConnectionError(err) {
+    // throw away this connection so that
+    // we get a new one when retrying
+    connection = undefined;
+    // retry
     retry();
   }
 
@@ -78,8 +86,7 @@ function Client(options) {
       retries ++;
       if (retries > maxRetries)
         respondError(new Error('max retries reached'));
-      else
-        s.command(lastCommand, callback);
+      else sendCommand(lastCommand);
     }
   }
 
