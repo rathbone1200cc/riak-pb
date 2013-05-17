@@ -16,6 +16,7 @@ function Client(options) {
   var lastCommand;
   var callback;
   var response = {};
+  var expectMultiple;
 
   var retries = 0;
   var maxRetries = options.maxRetries || 100;
@@ -32,8 +33,10 @@ function Client(options) {
   };
 
   function sendCommand(command) {
+    assert(command.payload, 'need command.payload');
     if (! connection) connection = connect();
     var serialized = Protocol.serialize(command.payload);
+    expectMultiple = command.expectMultiple;
     parser.expectMultiple(command.expectMultiple);
     connection.write(serialized);
   }
@@ -50,6 +53,7 @@ function Client(options) {
     parser = Protocol.parse();
     connection.pipe(parser);
     parser.on('readable', onParserReadable);
+    parser.on('done', onParserDone);
     return connection;
   }
 
@@ -62,11 +66,22 @@ function Client(options) {
   }
 
 
+  /// On Parser Readable
+
+  function onParserDone() {
+    console.log('parser done');
+    s.emit('done');
+    finishResponse();
+  }
+
+
   /// Read from parser
 
   function onParserReadable() {
     var reply;
     while (reply = parser.read()) {
+      console.log('from parser: %j', reply);
+      s.push(reply);
       handleReply(reply);
     }
   }
@@ -78,20 +93,10 @@ function Client(options) {
     if (reply.errmsg) {
       respondError(new Error(reply.errmsg));
     } else {
-      response = reply;
-      finishResponse();
-    }
-  }
-
-
-  /// Retry
-
-  function retry() {
-    if (lastCommand) {
-      retries ++;
-      if (retries > maxRetries)
-        respondError(new Error('max retries reached'));
-      else sendCommand(lastCommand);
+      if (! expectMultiple) {
+        response = reply;
+        finishResponse();
+      }
     }
   }
 
@@ -104,11 +109,21 @@ function Client(options) {
     cleanup();
     if (_callback) {
       if (err) _callback(err);
-      else {
-        _callback(null, _response); }
+      else _callback(null, _response);
     }
-    s.push(_response);
     s.emit('drain');
+  }
+
+
+  /// Retry
+
+  function retry() {
+    if (lastCommand) {
+      retries ++;
+      if (retries > maxRetries)
+        respondError(new Error('max retries reached'));
+      else sendCommand(lastCommand);
+    }
   }
 
 

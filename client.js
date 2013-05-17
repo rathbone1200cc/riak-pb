@@ -9,12 +9,14 @@ function RiakClient(options) {
   var queue = [];
   var busy = false;
   var ending = false;
+  var expectMultiple;
 
   if (! options) options = {};
 
   var client = DumbClient(options);
   client.on('readable', clientOnReadable);
   client.on('error', clientOnError);
+  client.on('done', clientOnDone);
 
 
   function request(type, data, expectMultiple, callback) {
@@ -28,6 +30,7 @@ function RiakClient(options) {
       if (queue.length) {
         busy = true;
         var args = queue.shift();
+        expectMultiple = args.expectMultiple;
         client.write(args);
       } else if (ending) {
         // no more jobs in the queue
@@ -40,13 +43,22 @@ function RiakClient(options) {
 
   function clientOnReadable() {
     assert(busy, 'shouldnt get a readable when not waiting for response');
-    var response = client.read();
-    assert(response, 'should get a response when client is readable');
-    var callback = queue.shift();
-    assert(callback, 'need a callback in the queue');
-    busy = false;
-    callback(null, response);
-    flush();
+    var response;
+    while (response = client.read()) {
+      var callback = queue.shift();
+      if (! expectMultiple) {
+        busy = false;
+        if (callback) callback(null, response);
+        flush();
+      }
+    }
+  }
+
+  function clientOnDone() {
+    if (busy && expectMultiple) {
+      busy = false;
+      flush();
+    }
   }
 
   function clientOnError(err) {
@@ -90,17 +102,40 @@ function RiakClient(options) {
 
   c.getKeys = function getKeys(params, callback) {
     var s = new PassThrough({objectMode: true});
+    var calledback = false;
     request('RpbListKeysReq', params, true, function(err) {
       if (err) {
         if (! callback) s.emit('error', err);
-        else callback(err);
+        else {
+          calledback = true;
+          callback(err);
+        }
       }
     });
     client.pipe(s);
     client.once('done', function() {
+      if (callback) client.removeListener('readable', clientOnReadable);
       client.unpipe(s);
+      if (callback && ! calledback) {
+        calledback = true;
+        callback(null, keys);
+      }
     });
+
+    var keys;
+    if (callback) {
+      keys = [];
+      client.on('readable', clientOnReadable);
+    }
     return s;
+
+    function clientOnReadable() {
+      var key;
+      while (key = client.read()) {
+        console.log('client got', key);
+        keys.push(key);
+      }
+    }
   };
 
   c.setClientId = function setClientId(params, callback) {

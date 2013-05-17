@@ -61,15 +61,18 @@ function Parser(translator) {
       var response = translator.decode(mc, packet.slice(1));
       if (response.content && Array.isArray(response.content)) {
         response.content.forEach(function (item) {
-          if (item.value && item.content_type) {
-            if (item.content_type.match(/^(text\/\*)|(application\/json)$/)) item.value = item.value.toString();
+          if (item.value && item.content_type &&
+              item.content_type.match(/^(text\/\*)|(application\/json)$/))
+          {
+            item.value = item.value.toString();
           }
         });
       }
 
-      if (! response.done) s.push(response);
+      s.push(response);
 
       reply = merge(reply, response);
+
       if (! expectMultiple || reply.done || mc === 'RpbErrorResp') {
         cleanup();
         s.emit('done');

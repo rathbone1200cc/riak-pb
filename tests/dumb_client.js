@@ -48,27 +48,22 @@ test('it connects from pool', function(t) {
     protocol: mockProtocol
   });
 
-  var writeCalledBack = false;
-  var ret = client.write({payload: {a: 'WAT'}}, function(err) {
-    writeCalledBack = true;
-    t.notOk(err, err && err.message);
-  });
+  var ret = client.write({payload: {a: 'WAT'}});
 
   var replyCount = 0;
   client.on('readable', function() {
+    console.log('READABLE');
     var buf;
     while (buf = client.read()) {
       replyCount ++;
       t.equal(replyCount, 1);
       t.deepEqual(buf, {a: 'WAT', done: true});
-      t.ok(writeCalledBack);
       t.end();
     }
   });
 
   t.strictEqual(ret, false);
 });
-
 
 test('it reconnects when the connection errors', function(t) {
 
@@ -123,11 +118,7 @@ test('it reconnects when the connection errors', function(t) {
     protocol: mockProtocol
   });
 
-  var writeCalledBack = false;
-  var ret = client.write({payload: {a: 'WAT'}}, function(err) {
-    writeCalledBack = true;
-    t.notOk(err, err && err.message);
-  });
+  var ret = client.write({payload: {a: 'WAT'}});
 
   var replyCount = 0;
   client.on('readable', function() {
@@ -136,7 +127,6 @@ test('it reconnects when the connection errors', function(t) {
       replyCount ++;
       t.equal(replyCount, 1);
       t.deepEqual(buf, {a: 'WAT', done: true});
-      t.ok(writeCalledBack);
       t.equal(connectCount, 2);
       t.end();
     }
