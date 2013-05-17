@@ -1,4 +1,5 @@
 var test = require('tap').test;
+var async = require('async');
 var Client = require('../');
 var options = {nodes: [{host: '127.0.0.1', port: 8087}]};
 var client = Client(options);
@@ -199,11 +200,17 @@ test('getKeys streaming', function(t) {
   });
 });
 
+test('del', function(t) {
+  var keys = ['test', 'large_test', 'test-vclock', 'test-put-index'];
+  async.each(keys, del, function(err) {
+    t.notOk(err, err && err.message);
+    t.end();
+  });
 
-
-exports.setBucket = function (test) {
-
-};
+  function del(key, cb) {
+    client.del({bucket: 'test', key: key}, cb);
+  }
+});
 
 test('disconnects', function(t) {
   client.disconnect();
@@ -273,19 +280,4 @@ exports.search = function (test) {
   });
 };
 
-exports.del = function (test) {
-  client.del({ bucket: 'test', key: 'test' }, function (reply) {
-    test.equal(reply.errmsg, undefined);
-    client.del({ bucket: 'test', key: 'large_test' }, function (reply) {
-      test.equal(reply.errmsg, undefined);
-      client.del({ bucket: 'test', key: 'test-vclock' }, function (reply) {
-        test.equal(reply.errmsg, undefined);
-        client.del({ bucket: 'test', key: 'test-put-index' }, function (reply) {
-          test.equal(reply.errmsg, undefined);
-          test.done();
-        });
-      });
-    });
-  });
-};
 

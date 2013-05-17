@@ -15,7 +15,8 @@
     "butils": "*"
   },
   "devDependencies": {
-    "tap": "*"
+    "tap": "*",
+    "async": "*"
   },
   "keywords": [
     "riak",

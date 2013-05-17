@@ -171,7 +171,7 @@ function RiakClient(options) {
   };
 
   c.del = function del(params, callback) {
-    this.makeRequest('RpbDelReq', params, false, callback);
+    request('RpbDelReq', params, false, callback);
   };
 
   c.getIndex = function getIndex(params, callback) {
