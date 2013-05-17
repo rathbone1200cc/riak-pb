@@ -109,6 +109,7 @@ function RiakClient(options) {
 
     client.once('done', function() {
       client.removeListener('readable', clientOnReadable);
+      s.emit('end');
     });
 
     var keys;
@@ -134,7 +135,9 @@ function RiakClient(options) {
       var reply;
       while (reply = client.read()) {
         if (keys) keys = keys.concat(reply.keys);
-        s.push(reply);
+        reply.keys.forEach(function(key) {
+          s.push(key);
+        });
       }
     }
   };

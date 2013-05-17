@@ -180,6 +180,25 @@ test('getKeys', function (t) {
   });
 });
 
+test('getKeys streaming', function(t) {
+  var expectingKeys = ['test', 'large_test', 'test-vclock', 'test-put-index'];
+
+  var s = client.getKeys({ bucket: 'test' });
+  var count = 0;
+  s.on('readable', function () {
+    var key;
+    while(key = s.read()) {
+      count ++;
+      t.ok(expectingKeys.indexOf(key) >= 0);
+    }
+  });
+
+  s.once('end', function() {
+    t.ok(count > 0);
+    t.end();
+  });
+});
+
 
 
 exports.setBucket = function (test) {
