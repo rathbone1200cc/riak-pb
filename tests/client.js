@@ -167,7 +167,6 @@ test('resetBucket', function(t) {
 });
 
 test('getKeys', function (t) {
-  console.log('-------');
   client.getKeys({ bucket: 'test' }, function (err, keys) {
     t.notOk(err, err && err.message);
     t.ok(Array.isArray(keys));

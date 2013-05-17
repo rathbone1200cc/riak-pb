@@ -106,14 +106,9 @@ function RiakClient(options) {
 
   c.getKeys = function getKeys(params, callback) {
     var s = new PassThrough({objectMode: true});
-    var calledback = false;
 
     client.once('done', function() {
       client.removeListener('readable', clientOnReadable);
-      if (callback && ! calledback) {
-        calledback = true;
-        callback(null, keys);
-      }
     });
 
     var keys;
@@ -125,21 +120,21 @@ function RiakClient(options) {
     request('RpbListKeysReq', params, true, function(err) {
       if (err) {
         if (! callback) s.emit('error', err);
-        else {
-          calledback = true;
-          callback(err);
-        }
+        else callback(err);
       }
+      else if (callback) {
+        callback(null, keys);
+      }
+
     });
 
     return s;
 
     function clientOnReadable() {
-      var key;
-      while (key = client.read()) {
-        console.log('read from the client:', key);
-        keys.push(key);
-        s.push(key);
+      var reply;
+      while (reply = client.read()) {
+        if (keys) keys = keys.concat(reply.keys);
+        s.push(reply);
       }
     }
   };
