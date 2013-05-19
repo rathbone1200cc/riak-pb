@@ -83,7 +83,6 @@ function RiakClient(options) {
     else  client.emit('error', err);
   }
 
-
   /// Done
   function done(err, result) {
     if (! isDone) {
@@ -128,7 +127,6 @@ function RiakClient(options) {
   }
 
   c.getKeys = function getKeys(params, callback) {
-
     var s = ClientStream(!!callback, getKeysMap, getKeysReduce);
     request('RpbListKeysReq', params, true, callback, s);
     return s;

@@ -38,6 +38,12 @@ function Pool(options) {
       connection.once('timeout', onTimeout.bind(connection));
       connection.once('error', onError.bind(connection));
       connection.once('end', onEnd.bind(connection));
+
+      var oldDestroy = connection.destroy;
+      connection.destroy = function() {
+        cleanup.call(this);
+        oldDestroy.apply(connection);
+      };
     }
 
     return connection;
@@ -56,6 +62,7 @@ function Pool(options) {
   }
 
   function onTimeout() {
+    console.log('timeout, ending');
     connection.end();
   }
 

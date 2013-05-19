@@ -13,7 +13,9 @@ test('it connects from pool', function(t) {
     cb();
   };
 
-  mockConnection._read = function() {}
+  mockConnection._read = function() {};
+
+  mockConnection.destroy = function() {};
 
   var mockProtocol = {
     parse: function() {
@@ -27,6 +29,8 @@ test('it connects from pool', function(t) {
       parser._read = function() {};
 
       parser.expectMultiple = function(v) {};
+
+      parser.destroy = function() {};
 
       return parser;
 
@@ -71,7 +75,9 @@ test('it reconnects when the connection errors', function(t) {
   var mockConnection = new Duplex({objectMode: true});
   mockConnection._write = function(o, encoding, cb) {
     if (connectCount < 2) {
-      mockConnection.emit('error', 'Something awful has happened');
+      var error = new Error('Something awful has happened');
+      error.code = 'ECONNREFUSED';
+      mockConnection.emit('error', error);
       cb();
       return;
     }
@@ -82,6 +88,8 @@ test('it reconnects when the connection errors', function(t) {
   };
 
   mockConnection._read = function() {}
+
+  mockConnection.destroy = function() {};
 
   var mockProtocol = {
     parse: function() {
@@ -95,6 +103,8 @@ test('it reconnects when the connection errors', function(t) {
       parser._read = function() {};
 
       parser.expectMultiple = function(v) {};
+
+      parser.destroy = function() {};
 
       return parser;
 

@@ -31,5 +31,6 @@ function done(err, rets) {
     assert(ret == next);
     next ++;
   });
+  console.log('All OK');
   client.disconnect();
 }

@@ -1,12 +1,19 @@
 var assert = require('assert');
+var Domain = require('domain');
 var Duplex = require('stream').Duplex;
 var Pool = require('./pool');
 var _Protocol = require('./protocol');
+
+var reconnectErrorCodes = ['ECONNREFUSED', 'ECONNRESET'];
+var riakReconnectErrorCodes = ['all_nodes_down', 'Unknown message code.'];
 
 module.exports =
 function Client(options) {
   var pool = options.pool || Pool(options);
   var Protocol = options.protocol || _Protocol;
+
+  var domain = Domain.create();
+  domain.on('error', onDomainError);
 
   var s = new Duplex({objectMode: true, highWaterMark: 1});
 
@@ -14,12 +21,14 @@ function Client(options) {
   var connection;
   var parser;
   var lastCommand;
+  var lastSerializedPayload;
   var callback;
   var response = {};
   var expectMultiple;
 
   var retries = 0;
-  var maxRetries = options.maxRetries || 100;
+  var maxRetries = options.maxRetries || 10;
+  var maxDelay = options.maxDelay || 2000;
 
   /// Command
 
@@ -35,17 +44,16 @@ function Client(options) {
     if (callback) throw new Error('I\'m in the middle of a request');
     lastCommand = command;
     callback = _callback;
-    sendCommand(command);
+    lastSerializedPayload = Protocol.serialize(command.payload);
+    expectMultiple = command.expectMultiple;
+    sendCommand();
     return false;
   };
 
-  function sendCommand(command) {
-    assert(command.payload, 'need command.payload');
+  function sendCommand() {
     if (! connection) connection = connect();
-    var serialized = Protocol.serialize(command.payload);
-    expectMultiple = command.expectMultiple;
-    parser.expectMultiple(command.expectMultiple);
-    connection.write(serialized);
+    parser.expectMultiple(expectMultiple);
+    connection.write(lastSerializedPayload);
   }
 
   s._read = function() {};
@@ -56,6 +64,7 @@ function Client(options) {
   function connect() {
     if (destroyed) throw new Error('Destroyed');
     connection = pool.connect();
+    domain.add(connection);
     connection.on('error', onConnectionError);
     parser = Protocol.parse();
     connection.pipe(parser);
@@ -64,20 +73,47 @@ function Client(options) {
     return connection;
   }
 
+
+  /// Error handling
+
+  var lastError;
+  function onDomainError(err) {
+    if (err == lastError) {
+      return;
+    }
+    lastError = err;
+    process.nextTick(function() {
+      lastError = undefined;
+    });
+    if (err.code && ~reconnectErrorCodes.indexOf(err.code)) onConnectionError(err);
+    else s.emit('error', err);
+  }
+
   function onConnectionError(err) {
     // throw away this connection so that
     // we get a new one when retrying
-    connection = undefined;
+
+    if (connection) {
+      domain.remove(connection);
+      connection.removeListener('error', onConnectionError);
+      connection.unpipe(parser);
+      connection.destroy();
+      connection = undefined;
+      parser.destroy();
+      parser.removeListener('readable', onParserReadable);
+      parser.removeListener('done', onParserDone);
+      parser = undefined;
+    }
     // retry
     retry();
   }
 
 
-  /// On Parser Readable
+  /// On Parser Done
 
   function onParserDone() {
     s.emit('done');
-    finishResponse();
+    if (expectMultiple) finishResponse();
   }
 
 
@@ -85,7 +121,7 @@ function Client(options) {
 
   function onParserReadable() {
     var reply;
-    while (reply = parser.read()) {
+    while (parser && (reply = parser.read())) {
       handleReply(reply);
     }
   }
@@ -95,8 +131,22 @@ function Client(options) {
 
   function handleReply(reply) {
     if (reply.errmsg) {
-      respondError(new Error(reply.errmsg));
-    } else {
+      if (~riakReconnectErrorCodes.indexOf(reply.errmsg)) {
+        var error = new Error(reply.errmsg);
+        /// HACK
+        /// When shutting down a riak node
+        // I've observed that pending connections get this error
+        // Since I've never seen this error message
+        // in any other situation, I'm going to assume that
+        // this is the case where the node is shutting down.
+        // *sigh*
+        error.code = 'ECONNREFUSED'; // more HACK
+        onConnectionError(new Error(reply.errmsg));
+
+      }
+      else respondError(new Error(reply.errmsg));
+    }
+    else {
       if (! expectMultiple) {
         s.push(reply);
         response = reply;
@@ -128,11 +178,13 @@ function Client(options) {
   /// Retry
 
   function retry() {
-    if (lastCommand) {
-      retries ++;
-      if (retries > maxRetries)
-        respondError(new Error('max retries reached'));
-      else sendCommand(lastCommand);
+    retries ++;
+    if (retries > maxRetries)
+      respondError(new Error('max retries reached'));
+    else {
+      setTimeout(function() {
+        if (lastCommand) sendCommand();
+      }, Math.min(Math.exp(10, retries), maxDelay));
     }
   }
 
@@ -143,7 +195,7 @@ function Client(options) {
     var _callback = callback;
     cleanup();
     if (_callback) _callback(err);
-    else s.emit('error');
+    else s.emit('error', err);
     s.emit('drain');
   }
 
@@ -154,6 +206,7 @@ function Client(options) {
     callback = undefined;
     retries = 0;
     lastCommand = undefined;
+    lastSerializedPayload = undefined;
   }
 
 

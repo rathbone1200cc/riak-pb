@@ -4,7 +4,7 @@
   "description": "Riak Protocol Buffers Client",
   "main": "client.js",
   "scripts": {
-    "test": "tap tests/*.js"
+    "test": "tap tests/dumb_client.js tests/client.js"
   },
   "repository": {
     "type": "git",

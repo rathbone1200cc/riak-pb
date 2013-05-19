@@ -9,11 +9,13 @@ function Parser(translator) {
   var resBuffers = [];
   var reply = {};
   var expectMultiple = false;
+  var ended = false;
 
   var s = new Duplex({objectMode: true, highWaterMark: 0});
 
   s._write =
   function _write(buf, encoding, callback) {
+    if (ended) return callback();
     splitPacket(buf);
     if (numBytesAwaiting == 0) doReply();
     callback();
@@ -58,6 +60,7 @@ function Parser(translator) {
 
   function doReply() {
     resBuffers.forEach(function (packet) {
+      if (ended) return;
       var mc = messageCodes[packet[0]];
       var response = translator.decode(mc, packet.slice(1));
       if (response.content && Array.isArray(response.content)) {
@@ -76,7 +79,7 @@ function Parser(translator) {
 
       if (! expectMultiple || reply.done || mc === 'RpbErrorResp') {
         cleanup();
-        s.emit('done');
+        if (! ended) s.emit('done');
       }
     });
 
@@ -90,6 +93,16 @@ function Parser(translator) {
     resBuffers = [];
     numBytesAwaiting = 0;
   }
+
+
+  /// Destroy
+
+  s.destroy =
+  function destroy() {
+    ended = true;
+    // HACK: when destroying reset output buffer
+    s._readableState.buffer = [];
+  };
 
   return s;
 };
