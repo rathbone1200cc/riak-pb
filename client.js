@@ -1,11 +1,15 @@
 var EventEmitter = require('events').EventEmitter;
 var assert = require('assert');
+var Options = require('./options');
 var DumbClient = require('./dumb_client');
 var ClientStream = require('./client_stream');
 
 exports =
 module.exports =
 function RiakClient(options) {
+
+  options = Options(options);
+
   var c = {};
   var queue = [];
   var busy = false;
@@ -13,8 +17,6 @@ function RiakClient(options) {
   var expectMultiple;
   var stream;
   var isDone = false;
-
-  if (! options) options = {};
 
   var client = DumbClient(options);
   client.on('readable', clientOnReadable);

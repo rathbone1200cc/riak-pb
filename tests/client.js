@@ -2,8 +2,7 @@ var assert = require('assert');
 var test = require('tap').test;
 var async = require('async');
 var Client = require('../');
-var options = {nodes: [{host: '127.0.0.1', port: 8087}]};
-var client = Client(options);
+var client = Client();
 
 test('setClientId', function(t) {
   var cbCount = 0;
