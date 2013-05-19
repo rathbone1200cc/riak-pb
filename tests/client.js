@@ -311,6 +311,7 @@ test('mapred streams', function(t) {
 
 });
 
+
 test('del', function(t) {
   var cbCount = 0;
   var keys = ['test', 'large_test', 'test-vclock', 'test-put-index'];
@@ -321,7 +322,7 @@ test('del', function(t) {
   });
 
   function del(key, cb) {
-    client.del({bucket: 'test', key: key}, cb);
+    client.del('test', key, cb);
   }
 });
 
