@@ -7,7 +7,7 @@ var client = Client(options);
 
 test('setClientId', function(t) {
   var cbCount = 0;
-  client.setClientId({ client_id: 'testrunner' }, function (err) {
+  client.setClientId('testrunner', function (err) {
     t.equal(++cbCount, 1);
     t.notOk(err, err && err.message);
     t.end();
@@ -165,9 +165,8 @@ test('getBuckets', function(t) {
 
 test('setBucket', function(t) {
   var cbCount = 0;
-  client.setBucket({
-    bucket: 'test',
-    props: { allow_mult: true, n_val: 3 } },
+  client.setBucket('test',
+    { allow_mult: true, n_val: 3 },
     function (err, reply) {
       t.equal(++cbCount, 1);
       t.notOk(err, err && err.message);
@@ -177,7 +176,7 @@ test('setBucket', function(t) {
 
 test('getBucket', function(t) {
   var cbCount = 0;
-  client.getBucket({ bucket: 'test' }, function (err, bucket) {
+  client.getBucket('test', function (err, bucket) {
     t.equal(++cbCount, 1);
     t.notOk(err, err && err.message);
     t.strictEqual(bucket.n_val, 3);
@@ -188,9 +187,7 @@ test('getBucket', function(t) {
 
 test('resetBucket', function(t) {
   var cbCount = 0;
-  client.setBucket({
-    bucket: 'test',
-    props: { allow_mult: false, n_val: 3 } },
+  client.setBucket('test', { allow_mult: false, n_val: 3 },
     function (err, reply) {
       t.equal(++cbCount, 1);
       t.notOk(err, err && err.message);
@@ -200,7 +197,7 @@ test('resetBucket', function(t) {
 
 test('getKeys', function (t) {
   var cbCount = 0;
-  client.getKeys({ bucket: 'test' }, function (err, keys) {
+  client.getKeys('test', function (err, keys) {
     t.equal(++cbCount, 1);
     t.notOk(err, err && err.message);
     t.ok(Array.isArray(keys));
@@ -219,7 +216,7 @@ test('getKeys streaming', function(t) {
   var cbCount = 0;
   var expectingKeys = ['test', 'large_test', 'test-vclock', 'test-put-index'];
 
-  var s = client.getKeys({ bucket: 'test' });
+  var s = client.getKeys('test' );
   var count = 0;
   s.on('readable', function () {
     var key;

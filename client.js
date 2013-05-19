@@ -115,25 +115,25 @@ function RiakClient(options) {
     });
   };
 
-  c.getBucket = function getBucket(params, callback) {
-    request('RpbGetBucketReq', params, false, function(err, reply) {
+  c.getBucket = function getBucket(bucket, callback) {
+    request('RpbGetBucketReq', {bucket: bucket}, false, function(err, reply) {
       if (err) return callback(err);
       callback(null, reply.props);
     });
   }
 
-  c.setBucket = function setBucket(params, callback) {
-    request('RpbSetBucketReq', params, false, callback);
+  c.setBucket = function setBucket(bucket, props, callback) {
+    request('RpbSetBucketReq', {bucket: bucket, props: props}, false, callback);
   }
 
-  c.getKeys = function getKeys(params, callback) {
+  c.getKeys = function getKeys(bucket, callback) {
     var s = ClientStream(!!callback, getKeysMap, getKeysReduce);
-    request('RpbListKeysReq', params, true, callback, s);
+    request('RpbListKeysReq', {bucket: bucket}, true, callback, s);
     return s;
   };
 
-  c.setClientId = function setClientId(params, callback) {
-    request('RpbSetClientIdReq', params, false, callback);
+  c.setClientId = function setClientId(clientId, callback) {
+    request('RpbSetClientIdReq', { client_id: clientId }, false, callback);
   };
 
 
@@ -160,8 +160,8 @@ function RiakClient(options) {
     request('RpbGetReq', params, false, callback);
   };
 
-  c.del = function del(params, callback) {
-    request('RpbDelReq', params, false, callback);
+  c.del = function del(bucket, id, callback) {
+    request('RpbDelReq', {bucket: bucket, id: id}, false, callback);
   };
 
   c.getIndex = function getIndex(params, callback) {
