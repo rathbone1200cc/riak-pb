@@ -53,7 +53,11 @@ function RiakClient(options) {
       client.pipe(stream);
       client.once('done', function() {
         stream.emit('end');
-      })
+      });
+      client.once('interrupted', function(err) {
+        stream.emit('error', err);
+        stream.emit('end');
+      });
       stream.once('end', function() {
         client.unpipe(stream);
         done(null, stream.results);

@@ -93,6 +93,8 @@ function Client(options) {
     // throw away this connection so that
     // we get a new one when retrying
 
+    s.emit('interrupted', err);
+
     if (connection) {
       domain.remove(connection);
       connection.removeListener('error', onConnectionError);
