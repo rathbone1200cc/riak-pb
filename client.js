@@ -1,7 +1,7 @@
 var EventEmitter = require('events').EventEmitter;
 var assert = require('assert');
 var DumbClient = require('./dumb_client');
-var PassThrough = require('stream').PassThrough;
+var ClientStream = require('./client_stream');
 
 exports =
 module.exports =
@@ -11,28 +11,29 @@ function RiakClient(options) {
   var busy = false;
   var ending = false;
   var expectMultiple;
+  var stream;
+  var isDone = false;
 
   if (! options) options = {};
 
   var client = DumbClient(options);
   client.on('readable', clientOnReadable);
   client.on('error', clientOnError);
-  client.on('done', clientOnDone);
 
 
-  function request(type, data, expectMultiple, callback) {
-    queue.push({payload: {type: type, data: data}, expectMultiple: expectMultiple});
+  function request(type, data, expectMultiple, callback, stream) {
+    var req = {payload: {type: type, data: data}, expectMultiple: expectMultiple, stream: stream}
+    queue.push(req);
     queue.push(callback);
+
     flush();
   }
 
   function flush() {
     if (!busy) {
+      isDone = false;
       if (queue.length) {
-        busy = true;
-        var args = queue.shift();
-        expectMultiple = args.expectMultiple;
-        client.write(args);
+        actuallyDoRequest();
       } else if (ending) {
         // no more jobs in the queue
         // and we're ending
@@ -42,39 +43,60 @@ function RiakClient(options) {
     }
   }
 
+  function actuallyDoRequest() {
+    busy = true;
+    var args = queue.shift();
+    expectMultiple = args.expectMultiple;
+    stream = args.stream;
+    if (stream) {
+      // streaming
+      client.pipe(stream);
+      client.once('done', function() {
+        stream.emit('end');
+      })
+      stream.once('end', function() {
+        client.unpipe(stream);
+        done(null, stream.results);
+      });
+      stream.once('error', function(err) {
+        done(err);
+      });
+      stream.once('results', function(results) {
+        done(null, results);
+      });
+    }
+    client.write(args);
+  }
+
   function clientOnReadable() {
     if (! expectMultiple) {
       assert(busy, 'shouldnt get a readable when not waiting for response');
       var response;
       while (response = client.read()) {
-        if (! expectMultiple) {
-          busy = false;
-          var callback = queue.shift();
-          if (callback) callback(null, response);
-          flush();
-        }
+        if (! expectMultiple) done(null, response);
       }
     }
   }
 
-  function clientOnDone() {
-    if (busy && expectMultiple) {
-      busy = false;
-      var callback = queue.shift();
-      if (callback) callback(null);
-      flush();
-    }
+  function clientOnError(err) {
+    if (busy) done(err);
+    else  client.emit('error', err);
   }
 
-  function clientOnError(err) {
-    if (busy) {
+
+  /// Done
+  function done(err, result) {
+    if (! isDone) {
+      isDone = true;
       busy = false;
       var callback = queue.shift();
-      if (callback) callback(err);
-      else client.emit('error', err);
+      if (err) {
+        if (callback) callback(err);
+        else client.emit('error', err);
+      } else {
+        if (callback) callback(null, result);
+      }
       flush();
-    } else {
-      client.emit('error', err);
     }
   }
 
@@ -106,41 +128,10 @@ function RiakClient(options) {
   }
 
   c.getKeys = function getKeys(params, callback) {
-    var s = new PassThrough({objectMode: true});
 
-    client.once('done', function() {
-      client.removeListener('readable', clientOnReadable);
-      s.emit('end');
-    });
-
-    var keys;
-    if (callback) {
-      keys = [];
-    }
-    client.on('readable', clientOnReadable);
-
-    request('RpbListKeysReq', params, true, function(err) {
-      if (err) {
-        if (! callback) s.emit('error', err);
-        else callback(err);
-      }
-      else if (callback) {
-        callback(null, keys);
-      }
-
-    });
-
+    var s = ClientStream(!!callback, getKeysMap, getKeysReduce);
+    request('RpbListKeysReq', params, true, callback, s);
     return s;
-
-    function clientOnReadable() {
-      var reply;
-      while (reply = client.read()) {
-        if (keys) keys = keys.concat(reply.keys);
-        reply.keys.forEach(function(key) {
-          s.push(key);
-        });
-      }
-    }
   };
 
   c.setClientId = function setClientId(params, callback) {
@@ -180,44 +171,15 @@ function RiakClient(options) {
   };
 
   c.search = function search(params, callback) {
-    request('RpbSearchQueryReq', params, false, callback);
+    var s = ClientStream(!!callback);
+    request('RpbSearchQueryReq', params, false, callback, s);
+    return s;
   };
 
   c.mapred = function mapred(params, callback) {
-    var s = new PassThrough({objectMode: true});
-
-    client.once('done', function() {
-      client.removeListener('readable', clientOnReadable);
-      s.emit('end');
-    });
-
-    var results;
-    if (callback) {
-      results = [];
-    }
-
-    client.on('readable', clientOnReadable);
-
-    request('RpbMapRedReq', params, true, function(err) {
-      if (err) {
-        if (! callback) s.emit('error', err);
-        else callback(err);
-      }
-      else if (callback) {
-        callback(null, results);
-      }
-    });
-
+    var s = ClientStream(!!callback, undefined, mapRedReduce);
+    request('RpbMapRedReq', params, true, callback, s);
     return s;
-
-    function clientOnReadable() {
-      var result;
-      while(result = client.read()) {
-        if (results) results.push(result);
-        s.push(result);
-      }
-    }
-
   };
 
 
@@ -228,3 +190,19 @@ exports.createClient =
 function createClient(options) {
   return exports(options);
 };
+
+return;
+
+//// Utils
+
+function getKeysMap(result) {
+  return result.keys;
+}
+
+function getKeysReduce(o, n) {
+  return o.concat(n);
+}
+
+function mapRedReduce(o, n) {
+  return o.concat(n);
+}
