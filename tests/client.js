@@ -50,10 +50,12 @@ test('put', function (t) {
     key: 'test',
     content: { value: '{"test":"data"}',
     content_type: 'application/json',
-    indexes: [{ key: 'test_bin', value: 'test' }] } },
+    indexes: [{ key: 'test_bin', value: 'test' }] },
+    return_body: true },
     function (err, reply) {
       t.equal(++cbCount, 1);
       t.notOk(err, err && err.message);
+      t.equal(reply.content[0].value, '{"test":"data"}');
       t.end();
     });
 });
@@ -147,6 +149,7 @@ test('getIndex', function(t) {
       t.equal(++cbCount, 1);
       t.notOk(err, err && err.message);
       t.ok(Array.isArray(reply.keys));
+      if (! reply.keys) return t.end();
       t.equal(reply.keys[0], 'test');
       t.end();
     });
