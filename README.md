@@ -125,9 +125,7 @@ client.getIndex({
 Example:
 
 ```javascript
-client.setBucket({
-  bucket: 'test',
-  props: { allow_mult: true, n_val: 3 } },
+client.setBucket('test', { allow_mult: true, n_val: 3 },
   function (err, reply) {
     /// ...
   });
