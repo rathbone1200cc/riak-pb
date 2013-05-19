@@ -22,7 +22,6 @@ function RiakClient(options) {
   client.on('readable', clientOnReadable);
   client.on('error', clientOnError);
 
-
   function request(type, data, expectMultiple, callback, stream) {
     var req = {payload: {type: type, data: data}, expectMultiple: expectMultiple, stream: stream}
     queue.push(req);
@@ -56,20 +55,29 @@ function RiakClient(options) {
       client.once('done', function() {
         stream.emit('end');
       });
-      client.once('interrupted', function(err) {
-        stream.emit('error', err);
-        stream.emit('end');
-      });
+      client.once('interrupted', clientInterrupted);
       stream.once('end', function() {
-        client.unpipe(stream);
+        cleanup();
         done(null, stream.results);
       });
       stream.once('error', function(err) {
+        cleanup();
         done(err);
       });
       stream.once('results', function(results) {
+        cleanup();
         done(null, results);
       });
+
+      function cleanup() {
+        client.unpipe(stream);
+        client.removeListener('interrupted', clientInterrupted);
+      }
+
+      function clientInterrupted() {
+        stream.emit('error', err);
+        stream.emit('end');
+      }
     }
     client.write(args);
   }
