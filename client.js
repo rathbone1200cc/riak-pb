@@ -1,5 +1,6 @@
 var EventEmitter = require('events').EventEmitter;
 var assert = require('assert');
+var extend = require('util')._extend;
 var Options = require('./options');
 var DumbClient = require('./dumb_client');
 var ClientStream = require('./client_stream');
@@ -10,7 +11,7 @@ function RiakClient(options) {
 
   options = Options(options);
 
-  var c = new EventEmitter;
+  var c = new EventEmitter();
   var queue = [];
   var busy = false;
   var ending = false;
@@ -75,7 +76,7 @@ function RiakClient(options) {
         client.removeListener('interrupted', clientInterrupted);
       }
 
-      function clientInterrupted() {
+      function clientInterrupted(err) {
         s.emit('error', err);
         s.emit('end');
       }
