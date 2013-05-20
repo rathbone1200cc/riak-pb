@@ -18,7 +18,6 @@ function Pool(options) {
   if (! options.nodes) throw new Error('No options.nodes defined');
 
   var nodes = options.nodes;
-  var connections = {};
   var e = new EventEmitter();
 
   /// Connect
@@ -27,24 +26,14 @@ function Pool(options) {
   function connect() {
     var node = randomNode();
     var nodeStr = node.host + ':' + node.port;
-    var connection = connections[nodeStr];
-    if (! connection) {
-      connections[nodeStr] =
-      connection = net.connect(node);
+    connection = net.connect(node);
 
-      connection.___node__ = node;
+    connection.___node__ = node;
 
-      connection.setTimeout(options.innactivityTimeout);
-      connection.once('timeout', onTimeout.bind(connection));
-      connection.once('error', onError.bind(connection));
-      connection.once('end', onEnd.bind(connection));
-
-      var oldDestroy = connection.destroy;
-      connection.destroy = function() {
-        cleanup.call(this);
-        oldDestroy.apply(connection);
-      };
-    }
+    connection.setTimeout(options.innactivityTimeout);
+    connection.once('timeout', onTimeout.bind(connection));
+    connection.once('error', onError.bind(connection));
+    connection.once('end', onEnd.bind(connection));
 
     return connection;
   };
@@ -58,17 +47,10 @@ function Pool(options) {
 
   function onEnd() {
     e.emit('end', this.___node__);
-    cleanup.call(this);
   }
 
   function onTimeout() {
     connection.end();
-  }
-
-  function cleanup() {
-    var node = this.___node__;
-    var nodeStr = node.host + ':' + node.port;
-    delete connections[nodeStr];
   }
 
   /// Random node
