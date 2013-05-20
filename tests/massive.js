@@ -2,7 +2,13 @@ var async = require('async');
 var assert = require('assert');
 var client = require('../')({nodes: [{host: '127.0.0.1', port: 8087}]});
 
+client.on('warning', function(warn) {
+  console.log('client warning:', warn);
+});
+
 max = 10000;
+max = 10;
+
 var args = [];
 for(var i = 0 ; i < max; i ++) {
   args.push({bucket: 'test-massive', key: i.toString(), content: {
@@ -31,6 +37,32 @@ function done(err, rets) {
     assert(ret == next);
     next ++;
   });
-  console.log('All OK');
+  console.log('inserts OK.');
+  setTimeout(massiveGet, 1000);
+}
+
+function massiveGet() {
+  console.log('starting gets...');
+  var missing = max;
+  console.log('getting all keys...');
+  client.getKeys('test-massive', function(err, keys) {
+    if (err) throw err;
+    assert(keys.length >= max);
+
+    console.log('got all the keys: %j', keys, err);
+
+    keys.forEach(function(i) {
+      console.log('getting %j', i);
+      client.get({bucket: 'test-massive', key: i}, function(err, doc) {
+        if (err) throw err;
+        console.log('got', doc);
+        missing --;
+        assert(!!doc, 'no doc');
+        assert.equal(JSON.parse(doc.content[0].value).test, i);
+        if (missing == 0) console.log('ALL DONE!');
+      });
+    });
+
+  });
   client.disconnect();
 }

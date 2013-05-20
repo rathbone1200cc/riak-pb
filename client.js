@@ -16,6 +16,7 @@ function RiakClient(options) {
   var busy = false;
   var ending = false;
   var expectMultiple;
+  var callback;
   var stream;
   var isDone = false;
 
@@ -25,16 +26,19 @@ function RiakClient(options) {
   client.on('warning', clientOnWarning);
 
   function request(type, data, expectMultiple, callback, stream) {
-    var req = {payload: {type: type, data: data}, expectMultiple: expectMultiple, stream: stream}
+    var req = {
+      payload: {type: type, data: data},
+      expectMultiple: expectMultiple,
+      stream: stream,
+      callback: callback};
+
     queue.push(req);
-    queue.push(callback);
 
     flush();
   }
 
   function flush() {
     if (!busy) {
-      isDone = false;
       if (queue.length) {
         actuallyDoRequest();
       } else if (ending) {
@@ -47,33 +51,61 @@ function RiakClient(options) {
   }
 
   function actuallyDoRequest() {
+    isDone = false;
     busy = true;
     var args = queue.shift();
     expectMultiple = args.expectMultiple;
+    callback = args.callback;
     var s = stream = args.stream;
+
     if (s) {
+      var ended = false;
+      var resulted = false;
+      client.removeListener('readable', clientOnReadable);
+
       // streaming
+
       client.pipe(stream);
+
       client.once('done', function() {
-        s.emit('end');
+        if (! ended) s.emit('end');
       });
+
       client.once('interrupted', clientInterrupted);
+
       stream.once('end', function() {
-        cleanup();
-        done(null, s.results);
+        if (! ended) {
+          ended = true;
+          finish(null, s.results);
+        }
       });
+
       stream.once('error', function(err) {
         cleanup();
         done(err);
       });
+
       stream.once('results', function(results) {
-        cleanup();
-        done(null, results);
+        finish(null, results);
       });
 
+      var cleanedup = false;
+
       function cleanup() {
-        client.unpipe(stream);
-        client.removeListener('interrupted', clientInterrupted);
+        if (! cleanedup) {
+          cleanedup = true;
+          client.unpipe(stream);
+          client.removeListener('interrupted', clientInterrupted);
+          client.addListener('readable', clientOnReadable);
+        }
+      }
+
+      function finish(err, result) {
+        if (! resulted) {
+          cleanup();
+          resulted = true;
+          done(err, result);
+        }
       }
 
       function clientInterrupted(err) {
@@ -107,12 +139,13 @@ function RiakClient(options) {
     if (! isDone) {
       isDone = true;
       busy = false;
-      var callback = queue.shift();
       if (err) {
         if (callback) callback(err);
         else client.emit('error', err);
       } else {
-        if (callback) callback(null, result);
+        if (callback) {
+          callback(null, result);
+        }
       }
       flush();
     }
@@ -221,7 +254,12 @@ function getKeysMap(result) {
 }
 
 function getKeysReduce(o, n) {
-  return o.concat(n);
+  var v;
+  for (var i = 0; i < n.length; i++) {
+    v = n[i];
+    if (v && !~o.indexOf(v)) o.push(v);
+  }
+  return o;
 }
 
 function mapRedReduce(o, n) {

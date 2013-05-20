@@ -9,9 +9,7 @@ function ClientStream(hasCallback, map, reduce) {
   var s = new Transform({objectMode: true});
 
   var results;
-  if (hasCallback) {
-    this.results = results = [];
-  }
+  if (hasCallback) this.results = results = [];
 
   s._write =
   function _write(result, encoding, callback) {

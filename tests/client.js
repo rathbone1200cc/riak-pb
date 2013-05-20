@@ -66,11 +66,11 @@ test('get', function (t) {
     t.equal(++cbCount, 1);
     t.notOk(err, err && err.message);
     t.ok(Array.isArray(reply.content));
-    t.equal(reply.content.length, 1);
     t.equal(reply.content[0].value, '{"test":"data"}');
     t.end();
   });
 });
+
 
 test('put with vector clock', function (t) {
   var cbCount = 0;
@@ -131,7 +131,6 @@ test('get large', function(t) {
       t.equal(++cbCount, 1);
       t.notOk(err, err && err.message);
       t.ok(Array.isArray(reply.content));
-      t.equal(reply.content.length, 1);
       t.equal(reply.content[0].value, JSON.stringify(value));
       t.end();
     });

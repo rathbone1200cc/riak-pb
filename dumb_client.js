@@ -12,9 +12,6 @@ function Client(options) {
   var pool = options.pool || Pool(options);
   var Protocol = options.protocol || _Protocol;
 
-  var domain = Domain.create();
-  domain.on('error', onDomainError);
-
   var s = new Duplex({objectMode: true, highWaterMark: 1});
 
   var destroyed = false;
@@ -52,7 +49,19 @@ function Client(options) {
 
   function sendCommand() {
     assert(lastCommand, 'no overlapping commands allowed at this level');
-    if (! connection) connection = connect();
+    if (! connection) {
+      connection = connect();
+
+      /// All this following code just to
+      /// detect unsuccessful connection
+      var domain = Domain.create();
+      domain.on('error', onDomainError);
+      domain.add(connection);
+      connection.once('connect', function() {
+        domain.remove(connection);
+        domain.dispose();
+      });
+    }
     parser.expectMultiple(expectMultiple);
     connection.write(lastSerializedPayload);
   }
@@ -65,7 +74,6 @@ function Client(options) {
   function connect() {
     if (destroyed) throw new Error('Destroyed');
     connection = pool.connect();
-    domain.add(connection);
     connection.on('error', onConnectionError);
     parser = Protocol.parse();
     connection.pipe(parser);
@@ -79,9 +87,8 @@ function Client(options) {
 
   var lastError;
   function onDomainError(err) {
-    if (err == lastError) {
-      return;
-    }
+    if (err == lastError) return;
+
     lastError = err;
     process.nextTick(function() {
       lastError = undefined;
@@ -98,7 +105,6 @@ function Client(options) {
     s.emit('interrupted', err);
 
     if (connection) {
-      domain.remove(connection);
       connection.removeListener('error', onConnectionError);
       connection.unpipe(parser);
       connection.destroy();
@@ -108,7 +114,7 @@ function Client(options) {
       parser.removeListener('done', onParserDone);
       parser = undefined;
     }
-    // retry
+
     retry();
   }
 
@@ -156,8 +162,10 @@ function Client(options) {
         response = reply;
         finishResponse();
       } else {
-        if (reply.done) s.emit('done');
-        else {
+        if (reply.done) {
+          finishResponse();
+          s.emit('done');
+        } else {
           s.push(reply);
         }
       }
