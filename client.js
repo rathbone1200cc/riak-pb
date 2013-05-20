@@ -49,17 +49,17 @@ function RiakClient(options) {
     busy = true;
     var args = queue.shift();
     expectMultiple = args.expectMultiple;
-    stream = args.stream;
-    if (stream) {
+    var s = stream = args.stream;
+    if (s) {
       // streaming
       client.pipe(stream);
       client.once('done', function() {
-        stream.emit('end');
+        s.emit('end');
       });
       client.once('interrupted', clientInterrupted);
       stream.once('end', function() {
         cleanup();
-        done(null, stream.results);
+        done(null, s.results);
       });
       stream.once('error', function(err) {
         cleanup();
@@ -76,16 +76,15 @@ function RiakClient(options) {
       }
 
       function clientInterrupted() {
-        stream.emit('error', err);
-        stream.emit('end');
+        s.emit('error', err);
+        s.emit('end');
       }
     }
     client.write(args);
   }
 
   function clientOnReadable() {
-    if (! expectMultiple) {
-      assert(busy, 'shouldnt get a readable when not waiting for response');
+    if (! expectMultiple && busy) {
       var response;
       while (response = client.read()) {
         if (! expectMultiple) done(null, response);
@@ -184,7 +183,6 @@ function RiakClient(options) {
     if (typeof id == 'object') {
       extend(options, id);
     } else options.key = id;
-    console.log('destroying with options', options);
     request('RpbDelReq', options, false, callback);
   };
 
