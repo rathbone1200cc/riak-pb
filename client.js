@@ -99,7 +99,7 @@ function RiakClient(options) {
   }
 
   function clientOnWarning(warn) {
-    client.emit('warning', warn);
+    c.emit('warning', warn);
   }
 
   /// Done
