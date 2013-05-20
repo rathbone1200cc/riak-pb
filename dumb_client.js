@@ -93,6 +93,7 @@ function Client(options) {
     // throw away this connection so that
     // we get a new one when retrying
 
+    s.emit('warning', err);
     s.emit('interrupted', err);
 
     if (connection) {

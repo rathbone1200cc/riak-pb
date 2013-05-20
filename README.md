@@ -49,6 +49,7 @@ var client = riak(options);
 
 The API is based on [the Riak Protocol spec](http://docs.basho.com/riak/1.3.1/references/apis/protocol-buffers/), check it out to find out about what arguments you need.
 
+
 #### put(params, callback)
 
 Examples:
@@ -251,3 +252,10 @@ client.disconnect();
 * getClientId (callback) // callback(err, clientId)
 * ping (callback) // callback(err)
 * getServerInfo(callback) // callback(err, reply)
+
+#### Events
+
+The client object emits these events:
+
+* 'error' - (err)
+* 'warning' - (warning) - Emitted when there is an internal error, like a disconnection. In this case, the client will transparently attempt to reconnect (up to a limit of attempts) and a "warning" will be emitted with the underlying error object.

@@ -10,7 +10,7 @@ function RiakClient(options) {
 
   options = Options(options);
 
-  var c = {};
+  var c = new EventEmitter;
   var queue = [];
   var busy = false;
   var ending = false;
@@ -21,6 +21,7 @@ function RiakClient(options) {
   var client = DumbClient(options);
   client.on('readable', clientOnReadable);
   client.on('error', clientOnError);
+  client.on('warning', clientOnWarning);
 
   function request(type, data, expectMultiple, callback, stream) {
     var req = {payload: {type: type, data: data}, expectMultiple: expectMultiple, stream: stream}
@@ -94,7 +95,11 @@ function RiakClient(options) {
 
   function clientOnError(err) {
     if (busy) done(err);
-    else  client.emit('error', err);
+    else c.emit('error', err);
+  }
+
+  function clientOnWarning(warn) {
+    client.emit('warning', warn);
   }
 
   /// Done
