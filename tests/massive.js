@@ -11,7 +11,7 @@ for(var i = 0 ; i < max; i ++) {
     return_body: true });
 }
 
-async.mapSeries(args, put, done);
+async.mapLimit(args, 5, put, done);
 
 var count = 0;
 function put(arg, cb) {
