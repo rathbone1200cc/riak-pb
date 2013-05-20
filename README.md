@@ -228,9 +228,18 @@ s.on('readable', function() {
 ```
 
 ### del(bucket, id[, callback])
+### del(bucket, options[, callback])
 
 ```javascript
 client.del('test', key, function(err) {
+  // ...
+});
+```
+
+or, with options:
+
+```javascript
+client.del('test', {key: key, vclock: vclock}, function(err) {
   // ...
 });
 ```

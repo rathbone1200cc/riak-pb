@@ -180,7 +180,12 @@ function RiakClient(options) {
   };
 
   c.del = function del(bucket, id, callback) {
-    request('RpbDelReq', {bucket: bucket, id: id}, false, callback);
+    var options = {bucket: bucket};
+    if (typeof id == 'object') {
+      extend(options, id);
+    } else options.key = id;
+    console.log('destroying with options', options);
+    request('RpbDelReq', options, false, callback);
   };
 
   c.getIndex = function getIndex(params, callback) {
