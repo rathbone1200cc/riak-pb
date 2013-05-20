@@ -48,7 +48,6 @@ function Client(options) {
   };
 
   function sendCommand() {
-    assert(lastCommand, 'no overlapping commands allowed at this level');
     if (! connection) {
       connection = connect();
 

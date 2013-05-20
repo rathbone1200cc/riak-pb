@@ -6,8 +6,7 @@ client.on('warning', function(warn) {
   console.log('client warning:', warn);
 });
 
-max = 10000;
-max = 10;
+max = 1000;
 
 var args = [];
 for(var i = 0 ; i < max; i ++) {
@@ -49,20 +48,19 @@ function massiveGet() {
     if (err) throw err;
     assert(keys.length >= max);
 
-    console.log('got all the keys: %j', keys, err);
+    console.log('got all the keys: %j', keys.length);
 
     keys.forEach(function(i) {
-      console.log('getting %j', i);
       client.get({bucket: 'test-massive', key: i}, function(err, doc) {
         if (err) throw err;
-        console.log('got', doc);
         missing --;
         assert(!!doc, 'no doc');
         assert.equal(JSON.parse(doc.content[0].value).test, i);
-        if (missing == 0) console.log('ALL DONE!');
+        if (missing == 0) {
+          console.log('ALL DONE!');
+          client.disconnect();
+        }
       });
     });
-
   });
-  client.disconnect();
 }

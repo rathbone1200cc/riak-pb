@@ -62,7 +62,6 @@ function Pool(options) {
   }
 
   function onTimeout() {
-    console.log('timeout, ending');
     connection.end();
   }
 
