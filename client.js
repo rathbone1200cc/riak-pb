@@ -4,6 +4,7 @@ var extend = require('util')._extend;
 var Options = require('./options');
 var DumbClient = require('./dumb_client');
 var ClientStream = require('./client_stream');
+var log = require('./log')('client');
 
 exports =
 module.exports =
@@ -26,8 +27,10 @@ function RiakClient(options) {
   client.on('warning', clientOnWarning);
 
   function request(type, data, expectMultiple, callback, stream) {
+    var payload = {type: type};
+    if (data) payload.data = data;
     var req = {
-      payload: {type: type, data: data},
+      payload: payload,
       expectMultiple: expectMultiple,
       stream: stream,
       callback: callback};
@@ -117,9 +120,12 @@ function RiakClient(options) {
   }
 
   function clientOnReadable() {
+    log('dumb client is readable');
     if (! expectMultiple && busy) {
+      log('not expecting multiple and busy');
       var response;
       while (response = client.read()) {
+        log('read from the dumb client:', response);
         if (! expectMultiple) done(null, response);
       }
     }
@@ -137,6 +143,7 @@ function RiakClient(options) {
   /// Done
   function done(err, result) {
     if (! isDone) {
+      log('done. setting busy to false');
       isDone = true;
       busy = false;
       if (err) {
@@ -144,6 +151,7 @@ function RiakClient(options) {
         else client.emit('error', err);
       } else {
         if (callback) {
+          log('calling back with result', result);
           callback(null, result);
         }
       }

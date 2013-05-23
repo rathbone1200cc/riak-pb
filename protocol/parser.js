@@ -1,13 +1,13 @@
 var Duplex = require('stream').Duplex;
 var butils = require('butils');
 var messageCodes = require('./message_codes');
+var log = require('../log')('parser');
 
 module.exports =
 function Parser(translator) {
 
   var numBytesAwaiting = 0;
   var resBuffers = [];
-  var reply = {};
   var expectMultiple = false;
   var ended = false;
 
@@ -15,6 +15,7 @@ function Parser(translator) {
 
   s._write =
   function _write(buf, encoding, callback) {
+    log('_write:', buf);
     if (ended) return callback();
     splitPacket(buf);
     if (numBytesAwaiting == 0) doReply();
@@ -59,6 +60,7 @@ function Parser(translator) {
   /// Reply
 
   function doReply() {
+    log('doing reply, I have %d response buffers', resBuffers.length);
     resBuffers.forEach(function (packet) {
       if (ended) return;
       var mc = messageCodes[packet[0]];
@@ -73,12 +75,12 @@ function Parser(translator) {
         });
       }
 
+      log('pushing response buffer %j', response);
       s.push(response);
 
-      reply = merge(reply, response);
+      if (response.done) cleanup();
 
-      if (! expectMultiple || reply.done || mc === 'RpbErrorResp') {
-        cleanup();
+      if (! expectMultiple || response.done || mc === 'RpbErrorResp') {
         if (! ended) s.emit('done');
       }
     });
@@ -87,9 +89,10 @@ function Parser(translator) {
 
 
   /// Cleanup
-
+  var cleanup =
+  s.cleanup =
   function cleanup() {
-    reply = {};
+    log('cleaning up');
     resBuffers = [];
     numBytesAwaiting = 0;
   }
@@ -99,6 +102,7 @@ function Parser(translator) {
 
   s.destroy =
   function destroy() {
+    log('destroying');
     ended = true;
     // HACK: when destroying reset output buffer
     s._readableState.buffer = [];
@@ -106,28 +110,3 @@ function Parser(translator) {
 
   return s;
 };
-
-
-/// Merge
-
-function merge(obj1, obj2) {
-  var obj = {};
-  if (obj2.hasOwnProperty('phase')) {
-    obj = obj1;
-    if (obj[obj2.phase] === undefined) obj[obj2.phase] = [];
-    obj[obj2.phase] = obj[obj2.phase].concat(JSON.parse(obj2.response));
-  } else {
-    [obj1, obj2].forEach(function (old) {
-      Object.keys(old).forEach(function (key) {
-        if (!old.hasOwnProperty(key)) return;
-        if (Array.isArray(old[key])) {
-          if (!obj[key]) obj[key] = [];
-          obj[key] = obj[key].concat(old[key]);
-        } else {
-          obj[key] = old[key];
-        }
-      });
-    });
-  }
-  return obj;
-}
