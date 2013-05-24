@@ -241,6 +241,7 @@ test('search', function (t) {
   client.search({ index: 'key1_bin', q: 'test' }, function (err, reply) {
     t.equal(++cbCount, 1);
     t.notOk(err, err && err.message);
+    t.type(reply, 'object');
     t.end();
   });
 });

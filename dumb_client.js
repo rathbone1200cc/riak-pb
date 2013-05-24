@@ -82,7 +82,6 @@ function Client(options) {
     parser = Protocol.parse();
     connection.pipe(parser);
     parser.on('readable', onParserReadable);
-    parser.on('done', onParserDone);
     return connection;
   }
 
@@ -117,20 +116,10 @@ function Client(options) {
       connection = undefined;
       parser.destroy();
       parser.removeListener('readable', onParserReadable);
-      parser.removeListener('done', onParserDone);
       parser = undefined;
     }
 
     retry();
-  }
-
-
-  /// On Parser Done
-
-  function onParserDone() {
-    log('parser is done');
-    s.emit('done');
-    if (expectMultiple) finishResponse();
   }
 
 
@@ -164,14 +153,13 @@ function Client(options) {
       }
       else respondError(new Error(reply.errmsg));
     } else {
-      log('no error');
       if (! expectMultiple) {
         log('not expecting multiple. pushing %j', reply);
         s.push(reply);
         response = reply;
         finishResponse();
       } else {
-        log('not expecting multiple');
+        log('expecting multiple');
         if (reply.done) {
           finishResponse();
           s.emit('done');
@@ -198,13 +186,11 @@ function Client(options) {
         log('calling back with error', err.stack || err);
         _callback(err);
       } else {
-        log('calling back with result %j', _response);
-        _callback(null, _response);
+        _callback(null);
       }
     } else {
       log('No callback');
     }
-    s.emit('drain');
   }
 
 

@@ -78,8 +78,6 @@ function Parser(translator) {
       log('pushing response buffer %j', response);
       s.push(response);
 
-      if (response.done) cleanup();
-
       if (! expectMultiple || response.done || mc === 'RpbErrorResp') {
         if (! ended) s.emit('done');
       }

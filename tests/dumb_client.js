@@ -32,6 +32,8 @@ test('it connects from pool', function(t) {
 
       parser.destroy = function() {};
 
+      parser.cleanup = function() {};
+
       return parser;
 
     },
@@ -105,6 +107,8 @@ test('it reconnects when the connection errors', function(t) {
       parser.expectMultiple = function(v) {};
 
       parser.destroy = function() {};
+
+      parser.cleanup = function() {};
 
       return parser;
 

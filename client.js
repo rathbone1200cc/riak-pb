@@ -233,9 +233,7 @@ function RiakClient(options) {
   };
 
   c.search = function search(params, callback) {
-    var s = ClientStream(!!callback);
-    request('RpbSearchQueryReq', params, false, callback, s);
-    return s;
+    request('RpbSearchQueryReq', params, false, callback);
   };
 
   c.mapred = function mapred(params, callback) {
