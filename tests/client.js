@@ -14,7 +14,6 @@ test('setClientId', function(t) {
 });
 
 test('getClientId', function(t) {
-  console.log('-------');
   var cbCount = 0;
   client.getClientId(function(err, clientId) {
     t.equal(++cbCount, 1);

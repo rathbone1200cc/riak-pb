@@ -1,7 +1,7 @@
 var assert = require('assert');
 var Domain = require('domain');
 var Duplex = require('stream').Duplex;
-var Pool = require('./pool');
+var Connections = require('./connections');
 var _Protocol = require('./protocol');
 var log = require('./log')('dumb-client');
 
@@ -10,7 +10,7 @@ var riakReconnectErrorCodes = ['all_nodes_down', 'Unknown message code.'];
 
 module.exports =
 function Client(options) {
-  var pool = options.pool || Pool(options);
+  var connections = options.connections || Connections(options);
   var Protocol = options.protocol || _Protocol;
 
   var s = new Duplex({objectMode: true, highWaterMark: 1});
@@ -77,7 +77,7 @@ function Client(options) {
 
   function connect() {
     if (destroyed) throw new Error('Destroyed');
-    connection = pool.connect();
+    connection = connections.connect();
     connection.on('error', onConnectionError);
     parser = Protocol.parse();
     connection.pipe(parser);
