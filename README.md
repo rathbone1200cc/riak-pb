@@ -6,9 +6,9 @@ Features:
 
 * streaming
 * fail-over
-* retry
-* host pooling
-* load balancing between nodes (random)
+* automatic retry
+* connection pooling
+* load balancing
 
 ## Install
 
