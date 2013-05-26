@@ -1,64 +1,47 @@
+var assert = require('assert');
 var EventEmitter = require('events').EventEmitter;
 var Options = require('./options');
-var Client = require('./client');
 var ClientStream = require('./client_stream');
-var assert = require('assert');
+var Pool = require('./pool');
 
 module.exports =
 function BalancingClient(options) {
   options = Options(options);
 
-  var maxPool = options.maxPool || 5;
-
   var c = new EventEmitter();
 
-  var pool = [];
 
+  /// Pool
 
-  function getClient() {
-    var client = getClientFromPool();
-    if (! client) {
-      if (pool.length < maxPool)
-        client = createClient();
-      else
-        client = pool[Math.floor(Math.random() * pool.length)];
-    }
-    return client;
-  }
+  var pool = Pool(options);
 
-  function getClientFromPool() {
-    var client;
-    for (var i = 0; i < pool.length; i ++) {
-      client = pool[i];
-      if (! client.busy && client.queue.length == 0) return client;
-    }
-  }
+  pool.on('warning', function(warn) {
+    c.emit('warning', warn);
+  });
 
-  function createClient() {
-    var client = Client(options);
-    pool.push(client);
-    return client;
-  }
+  pool.on('error', function(err) {
+    c.emit('error', err);
+  });
+
+  pool.once('end', function() {
+    c.emit('end');
+  });
+
 
   /// Request
 
   function request() {
-    var client = getClient();
-    assert(client, 'getClient must return a client');
-    return client.request.apply(client, arguments);
+    var args = arguments;
+    pool.get(function(client) {
+      client.request.apply(client, args);
+    });
   }
 
   /// Disconnect
 
   c.end =
   c.destroy =
-  c.disconnect =
-  function disconnect() {
-    pool.forEach(function(client) {
-      client.disconnect();
-    });
-  };
-
+  c.disconnect = pool.disconnect;
 
   /// Utility methods
 

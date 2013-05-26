@@ -3,7 +3,6 @@ var assert = require('assert');
 var extend = require('util')._extend;
 var Options = require('./options');
 var DumbClient = require('./dumb_client');
-var ClientStream = require('./client_stream');
 var log = require('./log')('client');
 
 exports =
@@ -46,11 +45,19 @@ function RiakClient(options) {
     if (!c.busy) {
       if (c.queue.length) {
         actuallyDoRequest();
-      } else if (ending) {
-        // no more jobs in the queue
-        // and we're ending
-        // this is the time to say goodbye...
-        client.destroy();
+      } else {
+        if (ending) {
+          // no more jobs in the queue
+          // and we're ending
+          // this is the time to say goodbye...
+          client.destroy();
+          process.nextTick(function() {
+            c.emit('close');
+            c.emit('end');
+          });
+        } else {
+          c.emit('drain');
+        }
       }
     }
   }

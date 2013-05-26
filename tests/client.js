@@ -331,5 +331,7 @@ test('del', function(t) {
 
 test('disconnects', function(t) {
   client.disconnect();
-  t.end();
+  client.once('end', function() {
+    t.end();
+  })
 });
