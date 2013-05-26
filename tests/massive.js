@@ -6,7 +6,7 @@ client.on('warning', function(warn) {
   console.log('client warning:', warn);
 });
 
-max = 1000;
+max = 10000;
 
 var args = [];
 for(var i = 0 ; i < max; i ++) {

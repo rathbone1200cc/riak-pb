@@ -13,19 +13,21 @@ function RiakClient(options) {
   options = Options(options);
 
   var c = new EventEmitter();
-  var queue = [];
-  var busy = false;
   var ending = false;
   var expectMultiple;
   var callback;
   var stream;
   var isDone = false;
 
+  c.busy = false;
+  c.queue = [];
+
   var client = DumbClient(options);
   client.on('readable', clientOnReadable);
   client.on('error', clientOnError);
   client.on('warning', clientOnWarning);
 
+  c.request =
   function request(type, data, expectMultiple, callback, stream) {
     var payload = {type: type};
     if (data) payload.data = data;
@@ -35,14 +37,14 @@ function RiakClient(options) {
       stream: stream,
       callback: callback};
 
-    queue.push(req);
+    c.queue.push(req);
 
     flush();
   }
 
   function flush() {
-    if (!busy) {
-      if (queue.length) {
+    if (!c.busy) {
+      if (c.queue.length) {
         actuallyDoRequest();
       } else if (ending) {
         // no more jobs in the queue
@@ -55,8 +57,8 @@ function RiakClient(options) {
 
   function actuallyDoRequest() {
     isDone = false;
-    busy = true;
-    var args = queue.shift();
+    c.busy = true;
+    var args = c.queue.shift();
     expectMultiple = args.expectMultiple;
     callback = args.callback;
     var s = stream = args.stream;
@@ -121,7 +123,7 @@ function RiakClient(options) {
 
   function clientOnReadable() {
     log('dumb client is readable');
-    if (! expectMultiple && busy) {
+    if (! expectMultiple && c.busy) {
       log('not expecting multiple and busy');
       var response;
       while (response = client.read()) {
@@ -132,7 +134,7 @@ function RiakClient(options) {
   }
 
   function clientOnError(err) {
-    if (busy) done(err);
+    if (c.busy) done(err);
     else c.emit('error', err);
   }
 
@@ -145,7 +147,7 @@ function RiakClient(options) {
     if (! isDone) {
       log('done. setting busy to false');
       isDone = true;
-      busy = false;
+      c.busy = false;
       if (err) {
         if (callback) callback(err);
         else client.emit('error', err);
@@ -167,82 +169,6 @@ function RiakClient(options) {
     flush();
   };
 
-  /// Client utility methods
-  c.getBuckets = function getBuckets(callback) {
-    request('RpbListBucketsReq', null, false, function(err, reply) {
-      if (err) return callback(err);
-      callback(null, reply.buckets);
-    });
-  };
-
-  c.getBucket = function getBucket(bucket, callback) {
-    request('RpbGetBucketReq', {bucket: bucket}, false, function(err, reply) {
-      if (err) return callback(err);
-      callback(null, reply.props);
-    });
-  }
-
-  c.setBucket = function setBucket(bucket, props, callback) {
-    request('RpbSetBucketReq', {bucket: bucket, props: props}, false, callback);
-  }
-
-  c.getKeys = function getKeys(bucket, callback) {
-    var s = ClientStream(!!callback, getKeysMap, getKeysReduce);
-    request('RpbListKeysReq', {bucket: bucket}, true, callback, s);
-    return s;
-  };
-
-  c.setClientId = function setClientId(clientId, callback) {
-    request('RpbSetClientIdReq', { client_id: clientId }, false, callback);
-  };
-
-
-  c.getClientId = function getClientId(callback) {
-    request('RpbGetClientIdReq', null, false, function(err, reply) {
-      if (err) return callback(err);
-      callback(null, reply.client_id);
-    });
-  };
-
-  c.ping = function ping(callback) {
-    request('RpbPingReq', null, false, callback);
-  };
-
-  c.getServerInfo = function getServerInfo(callback) {
-    request('RpbGetServerInfoReq', null, false, callback);
-  };
-
-  c.put = function put(params, callback) {
-    request('RpbPutReq', params, false, callback);
-  };
-
-  c.get = function get(params, callback) {
-    request('RpbGetReq', params, false, callback);
-  };
-
-  c.del = function del(bucket, id, callback) {
-    var options = {bucket: bucket};
-    if (typeof id == 'object') {
-      extend(options, id);
-    } else options.key = id;
-    request('RpbDelReq', options, false, callback);
-  };
-
-  c.getIndex = function getIndex(params, callback) {
-    request('RpbIndexReq', params, false, callback);
-  };
-
-  c.search = function search(params, callback) {
-    request('RpbSearchQueryReq', params, false, callback);
-  };
-
-  c.mapred = function mapred(params, callback) {
-    var s = ClientStream(!!callback, undefined, mapRedReduce);
-    request('RpbMapRedReq', params, true, callback, s);
-    return s;
-  };
-
-
   return c;
 };
 
@@ -250,24 +176,3 @@ exports.createClient =
 function createClient(options) {
   return exports(options);
 };
-
-return;
-
-//// Utils
-
-function getKeysMap(result) {
-  return result.keys;
-}
-
-function getKeysReduce(o, n) {
-  var v;
-  for (var i = 0; i < n.length; i++) {
-    v = n[i];
-    if (v && !~o.indexOf(v)) o.push(v);
-  }
-  return o;
-}
-
-function mapRedReduce(o, n) {
-  return o.concat(n);
-}

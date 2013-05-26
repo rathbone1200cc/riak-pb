@@ -2,7 +2,7 @@
   "name": "riak-pb",
   "version": "0.0.1",
   "description": "Riak Protocol Buffers Client",
-  "main": "client.js",
+  "main": "balancing_client.js",
   "scripts": {
     "test": "tap tests/dumb_client.js"
   },
