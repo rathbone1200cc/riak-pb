@@ -168,19 +168,6 @@ client.search({ index: 'key1_bin', q: 'test' }, function (err, reply) {
 });
 ```
 
-Streaming:
-
-```javascript
-var s = client.search({ index: 'key1_bin', q: 'test' });
-
-s.on('readable', function() {
-  var res;
-  while(res = s.read()) {
-    console.log('got res:', res);
-  }
-});
-```
-
 #### mapred(params[, callback])
 
 With callback:
