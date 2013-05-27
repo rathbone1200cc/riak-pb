@@ -51,7 +51,8 @@ test('it connects from pool', function(t) {
 
   var client = Client({
     pool: mockPool,
-    protocol: mockProtocol
+    protocol: mockProtocol,
+    nodes: [{host: 'localhost', port: 8087}]
   });
 
   var ret = client.write({payload: {a: 'WAT'}});
@@ -128,7 +129,8 @@ test('it reconnects when the connection errors', function(t) {
 
   var client = Client({
     pool: mockPool,
-    protocol: mockProtocol
+    protocol: mockProtocol,
+    nodes: [{host: 'localhost', port: 8087}]
   });
 
   var ret = client.write({payload: {a: 'WAT'}});
