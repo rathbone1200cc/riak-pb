@@ -4,6 +4,7 @@ var Options = require('./options');
 var ClientStream = require('./client_stream');
 var Pool = require('./pool');
 
+exports =
 module.exports =
 function BalancingClient(options) {
   options = Options(options);
@@ -36,6 +37,7 @@ function BalancingClient(options) {
       client.request.apply(client, args);
     });
   }
+
 
   /// Disconnect
 
@@ -141,3 +143,10 @@ function getKeysReduce(o, n) {
 function mapRedReduce(o, n) {
   return o.concat(n);
 }
+
+/// Create Client
+
+exports.createClient =
+function createClient(options) {
+  return exports(options);
+};
