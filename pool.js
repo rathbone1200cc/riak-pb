@@ -9,6 +9,9 @@ function Pool(options) {
   var maxPool = options.maxPool || 5;
 
   var pool = [];
+  var waitingList = [];
+
+  /// Get
 
   p.get =
   function get(callback) {
@@ -16,7 +19,9 @@ function Pool(options) {
     if (! client && pool.length < maxPool) client = create();
 
     if (client) callback(client);
-    else p.once('drain', callback);
+    else {
+      waitingList.push(callback);
+    }
   }
 
   function getFromPool() {
@@ -26,6 +31,16 @@ function Pool(options) {
       if (! client.busy && client.queue.length == 0) return client;
     }
   }
+
+  /// Drain
+
+  p.on('drain', function(client) {
+    /// Once there is a client available, give it
+    /// the next request in the waiting list
+    if (waitingList.length) waitingList.shift()(client);
+  });
+
+  /// Create
 
   function create() {
     var client = Client(options);
