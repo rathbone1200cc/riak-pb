@@ -1,6 +1,6 @@
 {
   "name": "riak-pb",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Riak Protocol Buffers Client",
   "main": "balancing_client.js",
   "scripts": {
