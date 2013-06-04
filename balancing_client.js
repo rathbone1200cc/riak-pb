@@ -50,7 +50,7 @@ function BalancingClient(options) {
   c.getBuckets = function getBuckets(callback) {
     request('RpbListBucketsReq', null, false, function(err, reply) {
       if (err) return callback(err);
-      callback(null, reply.buckets);
+      callback(null, reply.buckets || []);
     });
   };
 
