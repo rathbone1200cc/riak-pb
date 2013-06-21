@@ -59,17 +59,21 @@ Examples:
 
 ```javascript
 client.put({
-  bucket: 'test',
-  key: 'test',
-  content: { value: '{"test":"data"}',
-  content_type: 'application/json',
-  indexes: [{ key: 'test_bin', value: 'test' }] } },
+    bucket: 'test',
+    key: 'test',
+    content: { 
+      value: '{"test":"data"}',
+      content_type: 'application/json',
+      indexes: [{ key: 'test_bin', value: 'test' }] 
+    } 
+  },
   function (err, reply) {
     //...
+    console.warn("ERr: "+JSON.stringify(err)+" Reply: "+JSON.stringify(reply));
   });
 ```
 
-With indexes:
+With multiple indexes:
 
 ```javascript
   var indexes = [{ key: 'key1_bin', value: 'value1' }, { key: 'key2_bin', value: 'value2' }];
