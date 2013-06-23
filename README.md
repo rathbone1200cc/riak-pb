@@ -128,6 +128,20 @@ client.getIndex({
   });
 ```
 
+Range query example:
+
+```javascript
+client.getIndex({
+  bucket: 'test',
+  index: 'test_bin',
+  qtype: 1,
+  range_min: 'abc',
+  range_max: 'abcdef' },
+  function (err, reply) {
+    //...
+  });
+```
+
 #### setBucket(params, callback)
 
 Example:
