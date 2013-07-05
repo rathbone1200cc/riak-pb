@@ -6,7 +6,7 @@ client.on('warning', function(warn) {
   console.log('client warning:', warn);
 });
 
-max = 10000;
+max = 100000;
 
 var args = [];
 for(var i = 0 ; i < max; i ++) {
@@ -16,7 +16,7 @@ for(var i = 0 ; i < max; i ++) {
     return_body: true });
 }
 
-async.mapLimit(args, 10, put, done);
+async.mapLimit(args, 20, put, done);
 
 var count = 0;
 function put(arg, cb) {
