@@ -39,7 +39,7 @@ var options = {
   nodes: [
     {
       host: 'myriakhostname.acme.com',
-      port: 8321 }],
+      port: 8087 }],
   maxPool: 5,     // Maximum number of connections in the connection pool - default is 5
   maxRetries: 10, // maximum times the client tries to reconnect before failing - default is 10
   maxDelay: 2000, // maximum time (ms) between reconnections - reconnections have an exponential backoff, but limited to this value - default is 2000
